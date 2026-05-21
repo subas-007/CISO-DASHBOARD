@@ -1,0 +1,50 @@
+{
+  "name": "ciso-backend",
+  "version": "1.0.0",
+  "description": "CISO Command Center — Node.js API Backend",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "node --import tsx/esm src/scripts/migrate.ts",
+    "db:seed": "node --import tsx/esm src/scripts/seed.ts"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "axios": "^1.16.1",
+    "better-sqlite3": "^11.10.0",
+    "bullmq": "^5.76.10",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
+    "otplib": "^12.0.1",
+    "passport": "^0.7.0",
+    "passport-oauth2": "^1.8.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.28"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^24.0.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/passport": "^1.0.17",
+    "@types/passport-oauth2": "^1.4.18",
+    "@types/qrcode": "^1.5.5",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.4",
+    "typescript": "~6.0.2"
+  }
+}

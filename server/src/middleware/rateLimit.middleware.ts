@@ -1,0 +1,25 @@
+import rateLimit from 'express-rate-limit'
+
+export const loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+export const apiRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 200,
+  message: { error: 'Rate limit exceeded.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+export const mfaRateLimit = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10,
+  message: { error: 'Too many MFA attempts.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
