@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { verifyAccessToken, isTokenBlacklisted } from '../services/token.service.js'
 import type { TokenPayload, UserRole } from '../types/index.js'
-import '../types/express.js'
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization

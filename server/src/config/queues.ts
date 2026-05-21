@@ -3,8 +3,15 @@ import { env } from './env.js'
 
 const connection = { url: env.REDIS_URL }
 
-export const ingestQueue = new Queue('ingest', {
-  connection,
+function makeQueue(name: string, opts: object) {
+  const q = new Queue(name, { connection, ...opts })
+  q.on('error', (err: Error) => {
+    if ((err as NodeJS.ErrnoException).code !== 'ECONNREFUSED') console.error(`[queue:${name}]`, err.message)
+  })
+  return q
+}
+
+export const ingestQueue = makeQueue('ingest', {
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: 'exponential', delay: 2000 },
@@ -13,8 +20,7 @@ export const ingestQueue = new Queue('ingest', {
   },
 })
 
-export const pollQueue = new Queue('poll', {
-  connection,
+export const pollQueue = makeQueue('poll', {
   defaultJobOptions: {
     attempts: 2,
     backoff: { type: 'fixed', delay: 5000 },

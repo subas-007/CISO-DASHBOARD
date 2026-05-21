@@ -3,12 +3,17 @@ import { env } from './env.js'
 
 export const redis = new Redis(env.REDIS_URL, {
   lazyConnect: true,
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times: number) => Math.min(times * 100, 3000),
+  maxRetriesPerRequest: 0,
+  retryStrategy: () => null, // don't retry — fail fast and let the app run without Redis
+  enableOfflineQueue: false,
 })
 
 redis.on('connect', () => console.log('✅ Redis connected'))
-redis.on('error', (err: Error) => console.warn('⚠️  Redis error:', err.message))
+redis.on('error', (err: Error) => {
+  if ((err as NodeJS.ErrnoException).code !== 'ECONNREFUSED') {
+    console.warn('⚠️  Redis error:', err.message)
+  }
+})
 
 export const REDIS_KEYS = {
   blacklistToken: (jti: string) => `blacklist:${jti}`,

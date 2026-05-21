@@ -21,7 +21,6 @@ import iso27001Routes from './routes/compliance/iso27001.routes.js'
 import workflowRoutes from './routes/compliance/workflow.routes.js'
 import integrationsRoutes from './routes/integrations.routes.js'
 import { startPollers } from './jobs/poller.js'
-import { ingestWorker } from './workers/ingest.worker.js'
 import { ensureWorkflowTables } from './services/compliance/auditWorkflow.service.js'
 
 const app = express()
@@ -80,8 +79,16 @@ async function start() {
   ensureWorkflowTables()
   await redis.connect().catch(() => console.warn('⚠️  Redis unavailable — token blacklisting disabled'))
 
-  // Start BullMQ workers and pollers (only when Redis is available)
-  void ingestWorker
+  // Start BullMQ ingest worker only when Redis is available (lazy import)
+  if (redis.status === 'ready') {
+    import('./workers/ingest.worker.js').then(() => {
+      console.log('✅ Ingest worker started')
+    }).catch(() => {
+      console.warn('⚠️  Ingest worker failed to start')
+    })
+  } else {
+    console.warn('⚠️  Ingest worker skipped — Redis unavailable (webhook queue disabled)')
+  }
   startPollers()
 
   app.listen(env.PORT, () => {
