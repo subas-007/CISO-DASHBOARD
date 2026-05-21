@@ -19,6 +19,7 @@ import riskRoutes from './routes/risk.routes.js'
 import nistRoutes from './routes/compliance/nist.routes.js'
 import iso27001Routes from './routes/compliance/iso27001.routes.js'
 import workflowRoutes from './routes/compliance/workflow.routes.js'
+import integrationsRoutes from './routes/integrations.routes.js'
 import { startPollers } from './jobs/poller.js'
 import { ingestWorker } from './workers/ingest.worker.js'
 import { ensureWorkflowTables } from './services/compliance/auditWorkflow.service.js'
@@ -60,6 +61,7 @@ app.use('/api/risk', riskRoutes)
 app.use('/api/compliance/nist', nistRoutes)
 app.use('/api/compliance/iso27001', iso27001Routes)
 app.use('/api/compliance/workflows', workflowRoutes)
+app.use('/api/integrations', integrationsRoutes)
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 app.use((_req, res) => {

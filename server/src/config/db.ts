@@ -125,5 +125,9 @@ export function applyMigrations() {
     CREATE INDEX IF NOT EXISTS idx_events_occurred ON security_events(occurred_at DESC);
     CREATE INDEX IF NOT EXISTS idx_compliance_framework ON compliance_findings(framework);
   `)
+
+  // Add source column if it doesn't exist yet (safe to run multiple times)
+  try { db.exec(`ALTER TABLE integration_configs ADD COLUMN source TEXT`) } catch {}
+
   console.log('✅ DB migrations applied')
 }

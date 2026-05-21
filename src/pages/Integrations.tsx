@@ -2,7 +2,7 @@ import { useMemo, useState, useRef } from 'react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import { integrations } from '../data/integrationsMockData'
 import type { IntegrationCategory } from '../data/integrationsMockData'
-import { useIntegrationConfigs } from '../hooks/useIntegrationConfigs'
+import { useIntegrationConfigs, INTEGRATION_SOURCES } from '../hooks/useIntegrationConfigs'
 import { useVAReports, generateDemoReport, parseVAReportJSON } from '../hooks/useVAReports'
 import { useIncidentIntegrations } from '../hooks/useIncidentIntegrations'
 import type { Severity } from '../types/security'
@@ -456,8 +456,9 @@ function ConfigModal({ integration, initialFields, currentStatus, testedAt, erro
   const st = STATUS_STYLES[statusKey]
 
   const handleTest = async () => {
-    onSave(fields)
+    onSave(fields)         // persist fields locally so the hook can read them
     setTestResult('testing')
+    setTestError('')
     const ok = await onTest()
     setTestResult(ok ? 'success' : 'failed')
     if (!ok) setTestError('Connection refused — check URL and credentials.')
@@ -501,7 +502,7 @@ function ConfigModal({ integration, initialFields, currentStatus, testedAt, erro
         {/* Test result banners */}
         {testResult === 'success' && (
           <div className="mx-5 mb-2 px-3 py-2 rounded-lg text-xs font-medium" style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981' }}>
-            Connection successful — integration is now active.
+            Connected — credentials verified and saved. Data will sync every 15 minutes.
           </div>
         )}
         {testResult === 'failed' && (
@@ -518,13 +519,12 @@ function ConfigModal({ integration, initialFields, currentStatus, testedAt, erro
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-white/[0.06]">
           <button onClick={onClose} className={secondaryBtn}>Cancel</button>
-          <button onClick={() => { onSave(fields); onClose() }} className={secondaryBtn} style={{ borderColor: 'rgba(99,102,241,0.3)', color: '#818cf8' }}>Save Configuration</button>
           <button
             onClick={handleTest}
             disabled={testResult === 'testing'}
             className={primaryBtn + ' disabled:opacity-60'}
           >
-            {testResult === 'testing' ? 'Testing...' : 'Test Connection'}
+            {testResult === 'testing' ? 'Connecting...' : testResult === 'success' ? '✓ Connected' : 'Connect'}
           </button>
         </div>
       </div>
@@ -632,11 +632,13 @@ interface IntegrationCardProps {
   integration: typeof integrations[0]
   onConfigure: () => void
   onTest: () => Promise<boolean>
+  onSync?: () => Promise<void>
+  onDisconnect?: () => Promise<void>
   configStatus: ConfigStatus
   testedAt?: string
 }
 
-function IntegrationCard({ integration, onConfigure, onTest, configStatus }: IntegrationCardProps) {
+function IntegrationCard({ integration, onConfigure, onTest, onSync, onDisconnect, configStatus }: IntegrationCardProps) {
   const sparkline = useMemo(() => makeSparkline(integration.id.charCodeAt(integration.id.length - 1) * 13), [integration.id])
   const vendorColor = VENDOR_COLORS[integration.vendor] ?? '#6366f1'
   const [vaOpen, setVaOpen] = useState(false)
@@ -712,16 +714,36 @@ function IntegrationCard({ integration, onConfigure, onTest, configStatus }: Int
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button onClick={onConfigure} className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all border border-white/[0.06]">
-          Configure
-        </button>
-        <button
-          onClick={onTest}
-          disabled={effectiveStatus === 'testing'}
-          className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-indigo-400 hover:bg-indigo-500/10 transition-all border border-indigo-500/20 disabled:opacity-50"
-        >
-          {effectiveStatus === 'testing' ? 'Testing...' : 'Test Connection'}
-        </button>
+        {effectiveStatus === 'connected' || effectiveStatus === 'connected_mock' ? (
+          <>
+            <button
+              onClick={onSync ? async () => { await onSync() } : undefined}
+              className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-all border border-emerald-500/20 flex items-center justify-center gap-1"
+            >
+              <RefreshCw size={10} />
+              Sync Now
+            </button>
+            <button
+              onClick={onDisconnect}
+              className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-red-400 hover:bg-red-500/10 transition-all border border-red-500/20"
+            >
+              Disconnect
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={onConfigure} className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all border border-white/[0.06]">
+              Configure
+            </button>
+            <button
+              onClick={onTest}
+              disabled={effectiveStatus === 'testing'}
+              className="flex-1 py-1.5 text-[11px] font-medium rounded-lg text-indigo-400 hover:bg-indigo-500/10 transition-all border border-indigo-500/20 disabled:opacity-50"
+            >
+              {effectiveStatus === 'testing' ? 'Connecting...' : 'Connect'}
+            </button>
+          </>
+        )}
       </div>
 
       {/* VA Reports panel (vuln scanners only) */}
@@ -931,7 +953,7 @@ function IncidentManagementSection() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Integrations() {
-  const { configs, saveConfig, testConnection, getConfig } = useIntegrationConfigs()
+  const { configs, saveConfig, testConnection, syncNow, disconnect, getConfig } = useIntegrationConfigs()
   const [openModal, setOpenModal] = useState<string | null>(null)
 
   const connected = integrations.filter(i => {
@@ -1017,6 +1039,8 @@ export default function Integrations() {
                       testedAt={cfg?.testedAt}
                       onConfigure={() => setOpenModal(int.id)}
                       onTest={() => testConnection(int.id)}
+                      onSync={syncNow ? async () => { await syncNow(int.id) } : undefined}
+                      onDisconnect={disconnect ? async () => { await disconnect(int.id) } : undefined}
                     />
                   )
                 })}
